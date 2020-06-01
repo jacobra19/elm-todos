@@ -8,8 +8,11 @@ module Main exposing (..)
 
 
 import Browser
-import Html exposing (Html, button, div, text)
-import Html.Events exposing (onClick)
+import Html exposing (Html, button, div, text,input)
+import Html.Attributes exposing (..)
+
+import Html.Events exposing (onClick,onInput)
+
 
 
 
@@ -24,19 +27,19 @@ main =
 -- MODEL
 
 
-
 type alias Todo =
-    { id : Int 
+    { id : String 
     , label : String
     }
 
-type alias Model = { todos: List Todo}
+type alias Model = {
+    todos: List Todo, 
+    newTodo: String}
 
 
 
 init : Model
-init = 
-    { todos = [] }
+init = { todos = [], newTodo = ""}
 
 
 
@@ -45,29 +48,39 @@ init =
 
 
 type Msg
-  = AddTodo
+  = HandleNewTodoChange String | AddTodo | DeleteTodo 
 
 
 update : Msg -> Model -> Model
 update msg model =
-  case msg of
-    AddTodo newTodo->
-        { model | todos = push newTodo model.todos }   -- push 3 (fromList [1,2]) == fromList [1,2,3]
+    case msg of
+        HandleNewTodoChange newTodoText ->
+            { model | newTodo = newTodoText}
 
-    DeleteTodo id->
-        { model | todos = List.filter id== }   -- push 3 (fromList [1,2]) == fromList [1,2,3]
+        AddTodo ->
+            { model | newTodo = "", todos = Todo "asdasd" model.newTodo :: model.todos }
 
+        DeleteTodo ->
+            model
 
 
 
 -- VIEW
+viewTodo : Todo -> Html Msg
+viewTodo todoModel = 
+
+    div [] [
+            div [] [ text todoModel.label]
+            , button [ onClick DeleteTodo ] [text "Delete"]
+        ]
 
 
 view : Model -> Html Msg
 view model =
-  div []
-    [ 
-        button [ onClick AddTodo ] [ text "Add" ]
-        -- , div [] [ text (String.fromInt model) ]
-        -- , button [ onClick Increment ] [ text "+" ]
+    div [] [
+        div [ style "display" "flex"] [ 
+            input [ placeholder "Enter Todo", value model.newTodo, onInput HandleNewTodoChange ] []
+            , button [ onClick AddTodo ] [ text "Add" ]
+        ],
+        div [] (List.map viewTodo model.todos)
     ]
