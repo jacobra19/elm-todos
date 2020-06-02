@@ -8,8 +8,9 @@ module Main exposing (..)
 
 
 import Browser
-import Html exposing (Html, button, div, text,input)
+import Html exposing (Html, button, div, text,input,h1)
 import Html.Attributes exposing (..)
+import UUID exposing (UUID)
 
 import Html.Events exposing (onClick,onInput)
 
@@ -48,8 +49,12 @@ init = { todos = [], newTodo = ""}
 
 
 type Msg
-  = HandleNewTodoChange String | AddTodo | DeleteTodo 
+  = HandleNewTodoChange String | AddTodo | DeleteTodo String 
 
+-- isFoundIdToRemove: Todo String -> Bool 
+-- isFoundIdToRemove todoModel id =
+--     todoModel.id == id
+    
 
 update : Msg -> Model -> Model
 update msg model =
@@ -58,27 +63,47 @@ update msg model =
             { model | newTodo = newTodoText}
 
         AddTodo ->
-            { model | newTodo = "", todos = Todo "asdasd" model.newTodo :: model.todos }
+            if model.newTodo == "" then
+                model
+            else 
+                { model | newTodo = "", todos = Todo model.newTodo model.newTodo :: model.todos }
 
-        DeleteTodo ->
-            model
+        DeleteTodo id->
+            { model | todos = List.filter (\item -> item.id /= id) model.todos}
 
 
 
 -- VIEW
+viewTodoStyle : List (Html.Attribute msg)
+viewTodoStyle = [ style "border-radius" "5px"
+    , style "border" "1px solid grey"
+    -- , style "background-color" "red"
+    , style "padding" "0px 15px"
+    , style "display" "flex"
+    ]
+
+rootStyle : List (Html.Attribute msg)
+rootStyle = [ 
+    style "display" "flex"
+    , style "align-items" "center"
+    , style "flex-direction" "column"
+    ]
+
 viewTodo : Todo -> Html Msg
 viewTodo todoModel = 
 
-    div [] [
+    div viewTodoStyle [
             div [] [ text todoModel.label]
-            , button [ onClick DeleteTodo ] [text "Delete"]
+            , button [ onClick (DeleteTodo todoModel.id) ] [text "Delete"]
         ]
+-- viewHeader: 
 
 
 view : Model -> Html Msg
 view model =
-    div [] [
-        div [ style "display" "flex"] [ 
+    div rootStyle [
+        h1 [ ] [ text "Todos in Elm"],
+        div [ ] [ 
             input [ placeholder "Enter Todo", value model.newTodo, onInput HandleNewTodoChange ] []
             , button [ onClick AddTodo ] [ text "Add" ]
         ],
