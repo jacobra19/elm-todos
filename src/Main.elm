@@ -8,7 +8,7 @@ module Main exposing (..)
 
 
 import Browser
-import Html exposing (Html, button, div, text,input,h1)
+import Html exposing (Html, button, div, text,input,h1,header,main_,footer)
 import Html.Attributes exposing (..)
 import UUID exposing (UUID)
 
@@ -31,6 +31,7 @@ main =
 type alias Todo =
     { id : String 
     , label : String
+    , isEditMode : Bool
     }
 
 type alias Model = {
@@ -49,7 +50,7 @@ init = { todos = [], newTodo = ""}
 
 
 type Msg
-  = HandleNewTodoChange String | AddTodo | DeleteTodo String 
+  = HandleNewTodoChange String | AddTodo | DeleteTodo String | HandleEditBtn String | HandleTodoChange String String
 
 -- isFoundIdToRemove: Todo String -> Bool 
 -- isFoundIdToRemove todoModel id =
@@ -66,7 +67,12 @@ update msg model =
             if model.newTodo == "" then
                 model
             else 
-                { model | newTodo = "", todos = Todo model.newTodo model.newTodo :: model.todos }
+                { model | newTodo = "", todos = Todo model.newTodo model.newTodo False :: model.todos }
+        HandleEditBtn id->
+            { model | todos = List.map (\item -> if item.id == id then {item | isEditMode = True} else item ) model.todos }
+        
+        HandleTodoChange id todoText->
+            { model | todos = List.map (\item -> if item.id == id then {item | label = todoText} else item ) model.todos }
 
         DeleteTodo id->
             { model | todos = List.filter (\item -> item.id /= id) model.todos}
@@ -74,38 +80,83 @@ update msg model =
 
 
 -- VIEW
-viewTodoStyle : List (Html.Attribute msg)
-viewTodoStyle = [ style "border-radius" "5px"
-    , style "border" "1px solid grey"
+todoRowAttr : List (Html.Attribute msg)
+todoRowAttr = [ style "border-radius" "5px"
+    , style "border" "1px solid lightgrey"
     -- , style "background-color" "red"
-    , style "padding" "0px 15px"
+    , style "padding" "5px 15px"
     , style "display" "flex"
+    , style "justify-content" "space-between"
+    , style "margin-bottom" "15px"
     ]
 
-rootStyle : List (Html.Attribute msg)
-rootStyle = [ 
+rootAttr : List (Html.Attribute msg)
+rootAttr = [ 
     style "display" "flex"
     , style "align-items" "center"
     , style "flex-direction" "column"
     ]
 
-viewTodo : Todo -> Html Msg
-viewTodo todoModel = 
+addTodoInputAttr : Model -> List (Html.Attribute Msg)
+addTodoInputAttr model = [
+    placeholder "Enter Todo"
+    , value model.newTodo
+    , onInput HandleNewTodoChange 
+    ,style "border" "1"
+    ,style "background" "whitesmoke"
+    ,style "border-radius" ".25rem"
+    ,style "padding" "5px"
+    ,style "color" "black"
+    ,style "margin-right" "15px"
+    ]
 
-    div viewTodoStyle [
-            div [] [ text todoModel.label]
+addTodoBtnAttr: List (Html.Attribute Msg)
+addTodoBtnAttr = [
+    onClick AddTodo 
+    ,style "border" "1"
+    ,style "background" "whitesmoke"
+    ,style "border-radius" ".25rem"
+    ,style "padding" "5px"
+    ,style "color" "black"
+    ]
+
+viewTodoRow : Todo -> Html Msg
+viewTodoRow todoModel = 
+
+    div todoRowAttr [
+        if todoModel.isEditMode then
+            input [ value todoModel.label , onInput (HandleTodoChange todoModel.id) ] []
+        else
+            div [ ] [ text todoModel.label],
+        div [ style "display" "flex" ] [
+            button [ onClick (HandleEditBtn todoModel.id), style "margin-right" "15px" ] [text "Edit"]
             , button [ onClick (DeleteTodo todoModel.id) ] [text "Delete"]
         ]
--- viewHeader: 
+    ]
+
+viewHeader: Html Msg
+viewHeader= 
+    header [] [
+        h1 [style "font-family" "Ubuntu, cursive"] [text "Todos App (Elm)"]
+    ]
+
+viewAddTodo: Model -> Html Msg
+viewAddTodo model = 
+    div [ style "margin-bottom" "15px", style "max-width" "400px"] [ 
+        input (addTodoInputAttr model) []
+        , button addTodoBtnAttr [ text "Add" ]
+    ]
 
 
 view : Model -> Html Msg
 view model =
-    div rootStyle [
-        h1 [ ] [ text "Todos in Elm"],
-        div [ ] [ 
-            input [ placeholder "Enter Todo", value model.newTodo, onInput HandleNewTodoChange ] []
-            , button [ onClick AddTodo ] [ text "Add" ]
+    div rootAttr [
+        viewHeader,
+        main_ [] [
+            viewAddTodo model,
+
+            div [] (List.map viewTodoRow model.todos)
+
         ],
-        div [] (List.map viewTodo model.todos)
+        footer [] []
     ]
