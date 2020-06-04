@@ -152,7 +152,7 @@ view : Model -> Html Msg
 view model =
     div rootAttr [
         viewHeader,
-        main_ [] [
+        main_ [ ] [
             viewAddTodo model,
 
             div [] (List.map viewTodoRow model.todos)
