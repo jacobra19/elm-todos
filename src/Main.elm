@@ -35,12 +35,13 @@ type alias Todo =
 type alias Model =
     { todos : List Todo
     , newTodo : String
+    , tempEditTodo : String
     }
 
 
 init : Model
 init =
-    { todos = [], newTodo = "" }
+    { todos = [], newTodo = "",tempEditTodo = "" }
 
 
 
@@ -51,8 +52,9 @@ type Msg
     = HandleNewTodoChange String
     | AddTodo
     | DeleteTodo String
-    | HandleEditBtn String
-    | HandleTodoChange String String
+    | HandleEditBtn String String
+    | HandleSaveBtn String String
+    | HandleTodoChange String
 
 
 
@@ -74,7 +76,7 @@ update msg model =
             else
                 { model | newTodo = "", todos = Todo model.newTodo model.newTodo False :: model.todos }
 
-        HandleEditBtn id ->
+        HandleEditBtn id tempLabel->
             { model
                 | todos =
                     List.map
@@ -83,27 +85,33 @@ update msg model =
                                 { item | isEditMode = True }
 
                             else
-                                item
+                                { item | isEditMode = False }
                         )
-                        model.todos
+                        model.todos,
+                tempEditTodo = tempLabel
             }
 
-        HandleTodoChange id todoText ->
+        HandleSaveBtn id newContent->
             { model
                 | todos =
                     List.map
                         (\item ->
                             if item.id == id then
-                                { item | label = todoText }
+                                { item | isEditMode = False, label = newContent }
 
                             else
                                 item
                         )
-                        model.todos
+                        model.todos,
+                tempEditTodo = ""
+                
             }
 
+        HandleTodoChange todoText ->
+            {model | tempEditTodo = todoText}
+
         DeleteTodo id ->
-            { model | todos = List.filter (\item -> item.id /= id) model.todos }
+            { model | todos = List.map (\item -> { item | isEditMode = False }) (List.filter (\item -> item.id /= id) model.todos) }
 
 
 
@@ -136,8 +144,14 @@ headerAttr =
     [ style "max-width" "400px"
     , style "width" "400px"
     , style "display" "flex"
-    , style "align-items" "center"
-    , style "flex-direction" "column"
+    , style "justify-content" "center"
+    ]
+
+
+mainAttr : List (Html.Attribute msg)
+mainAttr =
+    [ style "max-width" "400px"
+    , style "width" "400px"
     ]
 
 
@@ -152,6 +166,7 @@ addTodoInputAttr model =
     , style "padding" "5px"
     , style "color" "black"
     , style "margin-right" "15px"
+    , style "flex" "1"
     ]
 
 
@@ -166,16 +181,23 @@ addTodoBtnAttr =
     ]
 
 
-viewTodoRow : Todo -> Html Msg
-viewTodoRow todoModel =
+viewTodoRow : Model -> Todo -> Html Msg
+viewTodoRow model todoModel =
+    -- TempContent: String
+    -- TempContent = ""
+
     div todoRowAttr
         [ if todoModel.isEditMode then
-            input [ value todoModel.label, onInput (HandleTodoChange todoModel.id) ] []
+            input [ value model.tempEditTodo, onInput HandleTodoChange ] []
 
           else
             div [] [ text todoModel.label ]
         , div [ style "display" "flex" ]
-            [ button [ onClick (HandleEditBtn todoModel.id), style "margin-right" "15px" ] [ text "Edit" ]
+            [ if todoModel.isEditMode then
+                button [ onClick (HandleSaveBtn todoModel.id model.tempEditTodo), style "margin-right" "15px" ] [ text "Save" ]
+
+              else
+                button [ onClick (HandleEditBtn todoModel.id todoModel.label), style "margin-right" "15px" ] [ text "Edit" ]
             , button [ onClick (DeleteTodo todoModel.id) ] [ text "Delete" ]
             ]
         ]
@@ -190,7 +212,7 @@ viewHeader =
 
 viewAddTodo : Model -> Html Msg
 viewAddTodo model =
-    div [ style "margin-bottom" "15px", style "max-width" "400px" ]
+    div [ style "margin-bottom" "15px", style "width" "100%", style "display" "flex" ]
         [ input (addTodoInputAttr model) []
         , button addTodoBtnAttr [ text "Add" ]
         ]
@@ -200,9 +222,9 @@ view : Model -> Html Msg
 view model =
     div rootAttr
         [ viewHeader
-        , main_ []
+        , main_ mainAttr
             [ viewAddTodo model
-            , div [] (List.map viewTodoRow model.todos)
+            , div [] (List.map (viewTodoRow model) model.todos)
             ]
         , footer [] []
         ]
