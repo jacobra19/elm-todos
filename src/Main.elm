@@ -10,9 +10,9 @@ import Browser
 import Html exposing (Html, button, div, footer, h1, header, input, main_, text)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
-import UUID exposing (UUID)
-
-
+import UUID exposing (UUID,toString,forName)
+import Random
+import Time 
 
 -- MAIN
 
@@ -43,8 +43,11 @@ init : Model
 init =
     { todos = [], newTodo = "",tempEditTodo = "" }
 
+appID : UUID
+appID = UUID.forName "myapplication.com" UUID.dnsNamespace
 
-
+roll : Int
+roll = Random.int 1 9999999
 -- UPDATE
 
 
@@ -55,16 +58,13 @@ type Msg
     | HandleEditBtn String String
     | HandleSaveBtn String String
     | HandleTodoChange String
-
-
-
--- isFoundIdToRemove: Todo String -> Bool
--- isFoundIdToRemove todoModel id =
---     todoModel.id == id
+    | GenerateUUId
 
 
 update : Msg -> Model -> Model
 update msg model =
+    let _ = Debug.log "yo" model
+    in
     case msg of
         HandleNewTodoChange newTodoText ->
             { model | newTodo = newTodoText }
@@ -74,7 +74,14 @@ update msg model =
                 model
 
             else
-                { model | newTodo = "", todos = Todo model.newTodo model.newTodo False :: model.todos }
+                let 
+                    uuid = Random.initialSeed roll
+                        |> Random.step UUID.generator
+                        |> Tuple.first
+                        |> UUID.toString
+                        -- |> UUID.toString appID
+                in 
+                { model | newTodo = "", todos = Todo uuid model.newTodo False :: model.todos }
 
         HandleEditBtn id tempLabel->
             { model
