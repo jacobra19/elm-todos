@@ -9,16 +9,15 @@ module Main exposing (..)
 import Browser
 import Html exposing (Html, button, div, footer, h1, header, input, main_, text)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (onClick, onInput,onFocus)
 import UUID exposing (UUID,toString,forName)
 import Random
-import Time 
+import Time exposing (utc, toHour, toMinute, toSecond)
 
 -- MAIN
 
 
-main =
-    Browser.sandbox { init = init, update = update, view = view }
+main = Browser.sandbox { init = init, update = update, view = view }
 
 
 
@@ -38,16 +37,9 @@ type alias Model =
     , tempEditTodo : String
     }
 
-
 init : Model
-init =
-    { todos = [], newTodo = "",tempEditTodo = "" }
+init = { todos = [], newTodo = "",tempEditTodo = "" }
 
-appID : UUID
-appID = UUID.forName "myapplication.com" UUID.dnsNamespace
-
-roll : Int
-roll = Random.int 1 9999999
 -- UPDATE
 
 
@@ -58,14 +50,22 @@ type Msg
     | HandleEditBtn String String
     | HandleSaveBtn String String
     | HandleTodoChange String
-    | GenerateUUId
-
+    | HandleOnFocus
 
 update : Msg -> Model -> Model
 update msg model =
     let _ = Debug.log "yo" model
     in
     case msg of
+        HandleOnFocus ->
+            { model | todos = List.map
+                        (\item ->
+                            { item | isEditMode = False }
+                        )
+                        model.todos
+            }
+
+
         HandleNewTodoChange newTodoText ->
             { model | newTodo = newTodoText }
 
@@ -75,20 +75,19 @@ update msg model =
 
             else
                 let 
-                    uuid = Random.initialSeed roll
+                    uuid = Random.initialSeed 12345
                         |> Random.step UUID.generator
                         |> Tuple.first
                         |> UUID.toString
-                        -- |> UUID.toString appID
                 in 
-                { model | newTodo = "", todos = Todo uuid model.newTodo False :: model.todos }
+                { model | newTodo = "", todos = List.map (\item -> { item | isEditMode = False}) (Todo uuid model.newTodo False :: model.todos) }
 
         HandleEditBtn id tempLabel->
             { model
                 | todos =
                     List.map
                         (\item ->
-                            if item.id == id then
+                            if item.label == id then
                                 { item | isEditMode = True }
 
                             else
@@ -103,7 +102,7 @@ update msg model =
                 | todos =
                     List.map
                         (\item ->
-                            if item.id == id then
+                            if item.label == id then
                                 { item | isEditMode = False, label = newContent }
 
                             else
@@ -118,7 +117,7 @@ update msg model =
             {model | tempEditTodo = todoText}
 
         DeleteTodo id ->
-            { model | todos = List.map (\item -> { item | isEditMode = False }) (List.filter (\item -> item.id /= id) model.todos) }
+            { model | todos = List.map (\item -> { item | isEditMode = False }) (List.filter (\item -> item.label /= id) model.todos) }
 
 
 
@@ -167,6 +166,7 @@ addTodoInputAttr model =
     [ placeholder "Enter Todo"
     , value model.newTodo
     , onInput HandleNewTodoChange
+    , onFocus HandleOnFocus
     , style "border" "1"
     , style "background" "whitesmoke"
     , style "border-radius" ".25rem"
@@ -177,15 +177,19 @@ addTodoInputAttr model =
     ]
 
 
-addTodoBtnAttr : List (Html.Attribute Msg)
-addTodoBtnAttr =
-    [ onClick AddTodo
-    , style "border" "1"
-    , style "background" "whitesmoke"
-    , style "border-radius" ".25rem"
-    , style "padding" "5px"
-    , style "color" "black"
-    ]
+addTodoBtnAttr : Model -> List (Html.Attribute Msg)
+addTodoBtnAttr model=
+    let
+        isDisabled = model.newTodo == ""
+    in
+        [ onClick AddTodo
+        , disabled isDisabled
+        , style "border" "1"
+        , style "background" "whitesmoke"
+        , style "border-radius" ".25rem"
+        , style "padding" "5px"
+        , style "color" "black"
+        ]
 
 
 viewTodoRow : Model -> Todo -> Html Msg
@@ -201,11 +205,11 @@ viewTodoRow model todoModel =
             div [] [ text todoModel.label ]
         , div [ style "display" "flex" ]
             [ if todoModel.isEditMode then
-                button [ onClick (HandleSaveBtn todoModel.id model.tempEditTodo), style "margin-right" "15px" ] [ text "Save" ]
+                button [ onClick (HandleSaveBtn todoModel.label model.tempEditTodo), style "margin-right" "15px" ] [ text "Save" ]
 
               else
-                button [ onClick (HandleEditBtn todoModel.id todoModel.label), style "margin-right" "15px" ] [ text "Edit" ]
-            , button [ onClick (DeleteTodo todoModel.id) ] [ text "Delete" ]
+                button [ onClick (HandleEditBtn todoModel.label todoModel.label), style "margin-right" "15px" ] [ text "Edit" ]
+            , button [ onClick (DeleteTodo todoModel.label) ] [ text "Delete" ]
             ]
         ]
 
@@ -221,7 +225,7 @@ viewAddTodo : Model -> Html Msg
 viewAddTodo model =
     div [ style "margin-bottom" "15px", style "width" "100%", style "display" "flex" ]
         [ input (addTodoInputAttr model) []
-        , button addTodoBtnAttr [ text "Add" ]
+        , button (addTodoBtnAttr model) [ text "Add" ]
         ]
 
 
